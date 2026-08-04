@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "chip8.h"
+#include "sdl.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -12,57 +13,58 @@ int main(int argc, char* argv[]) {
     srand(time(NULL)); // seed the random number generator
     Chip8 chip8;
     
+    printf("Initializing CHIP-8\n");
     initialize(&chip8);
 
-    if (!loadROM(&chip8, argv[1])) {
+    printf("Loading ROM\n");
+    if (!load_ROM(&chip8, argv[1])) {
         fprintf(stderr, "Failed to load rom\n");
         return 1;
     }
 
-    printf("%02X %02X %02X %02X\n",
-       chip8.memory[0x200],
-       chip8.memory[0x201],
-       chip8.memory[0x202],
-       chip8.memory[0x203]);
+    SDLContext sdl;
+    printf("Initializing SDL\n");
+    if (!sdl_init(&sdl)) {
+        fprintf(stderr, "Failed to initialize SDL2\n");
+        return 1;
+    }
+    
+    double cpu_timer = 0.0;
+    double timer_timer = 0.0;
 
-    while (1) {
-        if (!chip8.waiting_for_key_press)
-            emulateCycle(&chip8);
-            
+    const double cpu_interval = 1.0 / 700.0; // seconds per instruction (for 700Hz CPU)
+    const double timer_interval = 1.0 / 60.0;
+    
+    bool running = true;
+    printf("Entering main loop\n");
+    
+    uint64_t last_time = SDL_GetPerformanceCounter();
+    while (running) {
+        uint64_t current_time = SDL_GetPerformanceCounter();
+
+        double elapsed =
+            (double)(current_time - last_time) / SDL_GetPerformanceFrequency();
+
+        last_time = current_time;
+        
+        cpu_timer += elapsed;
+        timer_timer += elapsed;
+
+        sdl_process_input(chip8.key, &running);
+        while (cpu_timer >= cpu_interval) {
+            if (!chip8.waiting_for_key_press)
+                emulate_cycle(&chip8);
+            cpu_timer -= cpu_interval;
+        }
+
+        while (timer_timer >= timer_interval) {
+            update_timers(&chip8);
+            timer_timer -= timer_interval;
+        }
+        
+        sdl_render(&sdl, chip8.gfx);  
     }
 
+    sdl_shutdown(&sdl);
     return 0;
 }
-
-//  1. #include 
-//  2. #include   // OpenGL graphics and input
-//  3. #include "chip8.h" // Your cpu core implementation
-//  4. 
-//  5. chip8 myChip8;
-//  6. 
-//  7. int main(int argc, char **argv) 
-//  8. {
-//  9.   // Set up render system and register input callbacks
-// 10.   setupGraphics();
-// 11.   setupInput();
-// 12. 
-// 13.   // Initialize the Chip8 system and load the game into the memory  
-// 14.   myChip8.initialize();
-// 15.   myChip8.loadGame("pong");
-// 16. 
-// 17.   // Emulation loop
-// 18.   for(;;)
-// 19.   {
-// 20.     // Emulate one cycle
-// 21.     myChip8.emulateCycle();
-// 22. 
-// 23.     // If the draw flag is set, update the screen
-// 24.     if(myChip8.drawFlag)
-// 25.       drawGraphics();
-// 26. 
-// 27.     // Store key press state (Press and Release)
-// 28.     myChip8.setKeys();	
-// 29.   }
-// 30. 
-// 31.   return 0;
-// 32. }

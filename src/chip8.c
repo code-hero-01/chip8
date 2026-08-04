@@ -13,16 +13,19 @@ void initialize(Chip8* chip8) {
 }
 
 
-void emulateCycle(Chip8* chip8) {
+void emulate_cycle(Chip8* chip8) {
     // fetch opcode
     if (!fetch(chip8)) 
         return;
     
     // decode opcode and execute opcode
-    decodeAndExecute(chip8);
+    execute(chip8);
+
+    // update timers
+    update_timers(chip8);
 }
 
-bool loadROM(Chip8* chip8, const char* filename) {
+bool load_ROM(Chip8* chip8, const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
         perror("Error opening file");
@@ -80,7 +83,7 @@ bool fetch(Chip8* chip8) {
     return true;
 }
 
-void decodeAndExecute(Chip8* chip8) {
+void execute(Chip8* chip8) {
     uint16_t opcode = chip8->opcode;
 
     // decode opcode
@@ -161,7 +164,12 @@ void decodeAndExecute(Chip8* chip8) {
                 }
                 
                 default:
-                    fprintf(stderr, "Unknown opcode: 0x%04X\n", opcode);
+                    fprintf(
+                        stderr,
+                        "Unknown/unsupported opcode: 0x%04X at PC 0x%04X\n",
+                        chip8->opcode,
+                        chip8->pc - 2
+                    );
                     break;
             }
 
@@ -252,7 +260,12 @@ void decodeAndExecute(Chip8* chip8) {
                     break;
 
                 default:
-                    fprintf(stderr, "Unknown opcode: 0x%04X\n", opcode);
+                    fprintf(
+                        stderr,
+                        "Unknown/unsupported opcode: 0x%04X at PC 0x%04X\n",
+                        chip8->opcode,
+                        chip8->pc - 2
+                    );
                     break;
             }
             break;
@@ -344,7 +357,12 @@ void decodeAndExecute(Chip8* chip8) {
                 }
 
                 default:
-                    fprintf(stderr, "Unknown opcode: 0x%04X\n", opcode);
+                    fprintf(
+                        stderr,
+                        "Unknown/unsupported opcode: 0x%04X at PC 0x%04X\n",
+                        chip8->opcode,
+                        chip8->pc - 2
+                    );
                     break;
             }
             break;
@@ -427,13 +445,32 @@ void decodeAndExecute(Chip8* chip8) {
                 }
 
                 default:
-                    fprintf(stderr, "Unknown opcode: 0x%04X\n", opcode);
+                    fprintf(
+                        stderr,
+                        "Unknown/unsupported opcode: 0x%04X at PC 0x%04X\n",
+                        chip8->opcode,
+                        chip8->pc - 2
+                    );
                     break;
             }
             break;
 
         default:
-            fprintf(stderr, "Unknown opcode: 0x%04X\n", opcode);
+            fprintf(
+                stderr,
+                "Unknown/unsupported opcode: 0x%04X at PC 0x%04X\n",
+                chip8->opcode,
+                chip8->pc - 2
+            );
             break;
     }
+}
+
+void update_timers(Chip8* chip8)
+{
+    if (chip8->delay_timer > 0)
+        chip8->delay_timer--;
+
+    if (chip8->sound_timer > 0)
+        chip8->sound_timer--;
 }

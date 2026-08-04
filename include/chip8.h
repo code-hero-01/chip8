@@ -32,9 +32,10 @@ typedef struct {
 } Chip8;
 
 void initialize(Chip8* chip8);
-bool loadROM(Chip8* chip8, const char* filename);
-void emulateCycle(Chip8* chip8);
+bool load_ROM(Chip8* chip8, const char* filename);
+void emulate_cycle(Chip8* chip8);
 bool fetch(Chip8* chip8);
-void decodeAndExecute(Chip8* chip8);
+void execute(Chip8* chip8);
+void update_timers(Chip8* chip8);
 
 #endif
