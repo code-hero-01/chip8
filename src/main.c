@@ -50,11 +50,17 @@ int main(int argc, char* argv[]) {
         cpu_timer += elapsed;
         timer_timer += elapsed;
 
-        sdl_process_input(chip8.key, &running);
+        int pressed_key = sdl_process_input(chip8.key, &running);
+        
+        if (chip8.waiting_for_key_press && pressed_key != -1) {
+            chip8.V[chip8.waiting_register] = pressed_key;
+            chip8.waiting_for_key_press = false;
+        }
+
         while (cpu_timer >= cpu_interval) {
-            if (!chip8.waiting_for_key_press)
+            if (!chip8.waiting_for_key_press) 
                 emulate_cycle(&chip8);
-            cpu_timer -= cpu_interval;
+            cpu_timer -= cpu_interval;    
         }
 
         while (timer_timer >= timer_interval) {

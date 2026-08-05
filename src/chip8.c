@@ -404,16 +404,20 @@ void execute(Chip8* chip8) {
                 
                 case 0x33: // Fx33 - LD B, Vx : Store BCD representation of Vx in memory locations I, I+1, and I+2
                 {
-                    uint8_t val = chip8->V[x];
-                    uint8_t ones = val % 10;
-                    val = val / 10;
-                    uint8_t tens = val % 10;
-                    val = val / 10;
-                    uint8_t hundreds = val % 10;
+                    // uint8_t val = chip8->V[x];
+                    // uint8_t ones = val % 10;
+                    // val = val / 10;
+                    // uint8_t tens = val % 10;
+                    // val = val / 10;
+                    // uint8_t hundreds = val % 10;
 
-                    chip8->memory[chip8->I] = hundreds;
-                    chip8->memory[chip8->I + 1] = tens;
-                    chip8->memory[chip8->I + 2] = ones;
+                    // chip8->memory[chip8->I] = hundreds;
+                    // chip8->memory[chip8->I + 1] = tens;
+                    // chip8->memory[chip8->I + 2] = ones;
+
+                    chip8->memory[chip8->I] = (chip8->V[x]%1000)/100;
+                    chip8->memory[chip8->I+1] = (chip8->V[x]%100)/10;
+                    chip8->memory[chip8->I+2] = (chip8->V[x]%10);
 
                     break;
                 }

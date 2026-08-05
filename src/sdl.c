@@ -34,9 +34,9 @@ bool sdl_init(SDLContext* sdl) {
     return true;
 }
 
-void sdl_process_input(uint8_t key[16], bool* running) {
+int sdl_process_input(uint8_t key[16], bool* running) {
     SDL_Event event;
-
+    int pressed_key = -1;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
             case SDL_QUIT:
@@ -45,9 +45,14 @@ void sdl_process_input(uint8_t key[16], bool* running) {
             
             case SDL_KEYDOWN:
             {    
-                uint8_t chip8_key = map_key(event.key.keysym.sym);
-                if (chip8_key != -1)
+                int chip8_key = map_key(event.key.keysym.sym);
+                
+                if (chip8_key != -1) {
                     key[chip8_key] = 1;
+                 
+                    if (!event.key.repeat)
+                        pressed_key = chip8_key;
+                }
 
                 break;
             }
@@ -62,6 +67,8 @@ void sdl_process_input(uint8_t key[16], bool* running) {
             }
         }
     }
+
+    return pressed_key;
 }
 
 void sdl_render(SDLContext* sdl, const uint8_t gfx[64 * 32]) { 
@@ -91,7 +98,7 @@ void sdl_shutdown(SDLContext* sdl) {
     SDL_Quit();
 }
 
-uint8_t map_key(SDL_Keycode key)
+int map_key(SDL_Keycode key)
 {
     switch (key) {
         case SDLK_1: return 0x1;
