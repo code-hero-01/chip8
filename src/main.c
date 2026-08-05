@@ -50,9 +50,10 @@ int main(int argc, char* argv[]) {
         cpu_timer += elapsed;
         timer_timer += elapsed;
 
-        int pressed_key = sdl_process_input(chip8.key, &running);
-        
-        if (chip8.waiting_for_key_press && pressed_key != -1) {
+        int released_key = -1;
+        int pressed_key = sdl_process_input(chip8.key, &running, &released_key);
+       
+        if (chip8.waiting_for_key_press && released_key != -1) {
             chip8.V[chip8.waiting_register] = pressed_key;
             chip8.waiting_for_key_press = false;
         }

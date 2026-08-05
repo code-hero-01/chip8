@@ -12,7 +12,7 @@ typedef struct {
 } SDLContext;
 
 bool sdl_init(SDLContext* sdl);
-int sdl_process_input(uint8_t key[16], bool* running);
+int sdl_process_input(uint8_t key[16], bool* running, int* released_key);
 void sdl_render(SDLContext* sdl, const uint8_t gfx[64 * 32]);
 void sdl_shutdown(SDLContext* sdl);
 

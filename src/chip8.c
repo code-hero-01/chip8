@@ -142,7 +142,7 @@ void execute(Chip8* chip8) {
         
         case 0x3000: // 3xkk - SE Vx, byte : Skip next instruction if Vx = kk
         {
-            if (chip8->V[x] != kk)
+            if (chip8->V[x] == kk)
                 chip8->pc += 2;
             break;
         }
@@ -172,6 +172,7 @@ void execute(Chip8* chip8) {
                     );
                     break;
             }
+            break;
 
         case 0x6000: // 6xkk - LD Vx, byte : Set Vx = kk
             chip8->V[x] = kk;
@@ -189,14 +190,17 @@ void execute(Chip8* chip8) {
                 
                 case (0x1): // 8xy1 - OR Vx, Vy : Set Vx = Vx OR Vy
                     chip8->V[x] = chip8->V[x] | chip8->V[y];        
+                    chip8->V[0xF] = 0;
                     break;
                     
                 case (0x2):  // 8xy2 - AND Vx, Vy : Set Vx = Vx AND Vy
                     chip8->V[x] = chip8->V[x] & chip8->V[y];  
+                    chip8->V[0xF] = 0;
                     break;
                 
                 case (0x3): // 8xy3 - XOR Vx, Vy : Set Vx = Vx XOR Vy
                     chip8->V[x] = chip8->V[x] ^ chip8->V[y]; 
+                    chip8->V[0xF] = 0;
                     break;
                 
                 case (0x4): // 8xy4 - ADD Vx, Vy : Set Vx = Vx + Vy, set VF = carry
@@ -212,19 +216,18 @@ void execute(Chip8* chip8) {
 
                 case (0x5): // 8xy5 - SUB Vx, Vy : Set Vx = Vx - Vy, set VF = NOT borrow
                 {
-                    uint8_t no_borrow = chip8->V[x] > chip8->V[y];
-                    
+                    uint8_t no_borrow = chip8->V[x] >= chip8->V[y];
                     chip8->V[x] -= chip8->V[y];
                     chip8->V[0xF] = no_borrow;
 
                     break;
                 }
              
-                case (0x6): // 8xy6 - SHR Vx {, Vy} : Set Vx = Vx SHR 1.
+                case (0x6): // 8xy6 - SHR Vx {, Vy} : Set Vx = Vy SHR 1.
                 {    
                     uint8_t LSB = chip8->V[x] & 1;
                     
-                    chip8->V[x] = chip8->V[x] >> 1;
+                    chip8->V[x] = chip8->V[y] >> 1;
                     chip8->V[0xF] = LSB;
 
                     break;
@@ -232,7 +235,7 @@ void execute(Chip8* chip8) {
 
                 case (0x7): // 8xy7 - SUBN : Vx, Vy Set Vx = Vy - Vx, set VF = NOT borrow
                 {
-                    uint8_t no_borrow = chip8->V[y] > chip8->V[x];
+                    uint8_t no_borrow = chip8->V[y] >= chip8->V[x];
                     
                     chip8->V[x] = chip8->V[y] - chip8->V[x];
                     chip8->V[0xF] = no_borrow;
@@ -240,11 +243,11 @@ void execute(Chip8* chip8) {
                     break;
                 }
 
-                case (0xE): // 8xyE - SHL Vx {, Vy} : Set Vx = Vx SHL 1
+                case (0xE): // 8xyE - SHL Vx {, Vy} : Set Vx = Vy SHL 1
                 {
-                    uint8_t MSB = chip8->V[x] & 0x80;
+                    uint8_t MSB = (chip8->V[y] & 0x80) >> 7;
                     
-                    chip8->V[x] = chip8->V[x] << 1;
+                    chip8->V[x] = chip8->V[y] << 1;
                     chip8->V[0xF] = MSB;
                     
                     break;
@@ -255,9 +258,11 @@ void execute(Chip8* chip8) {
         case 0x9000: // 9xy0 - SNE Vx, Vy : Skip next instruction if Vx != Vy.
             switch (n) {    
                 case 0:
+                {
                     if (chip8->V[x] != chip8->V[y])
                         chip8->pc += 2;
                     break;
+                }
 
                 default:
                     fprintf(
@@ -275,7 +280,7 @@ void execute(Chip8* chip8) {
             break;
 
         case 0xB000: // Bnnn - JP V0, addr : Jump to location nnn + V0
-            if (nnn + chip8->V[0] > RAM_SIZE) {
+            if (nnn + chip8->V[0] >= RAM_SIZE) {
                 fprintf(stderr, "Memory access out of bounds\n");
                 break;
             }    
@@ -292,8 +297,8 @@ void execute(Chip8* chip8) {
 
         case 0xD000: // Dxyn - DRW Vx, Vy, nibble : Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
         {   
-            uint8_t screen_x_start = chip8->V[x];
-            uint8_t screen_y_start = chip8->V[y];
+            uint8_t screen_x_start = chip8->V[x] % 64;
+            uint8_t screen_y_start = chip8->V[y] % 32;
 
             chip8->V[0xF] = 0;
 
@@ -310,8 +315,10 @@ void execute(Chip8* chip8) {
                     uint8_t sprite_pixel = 
                         (sprite_byte & (0x80 >> bit)) != 0; // 1 is set, 0 is not set
 
-                    uint8_t screen_x = (screen_x_start + bit) % 64;
-                    uint8_t screen_y = (screen_y_start + row) % 32;
+                    uint8_t screen_x = screen_x_start + bit;
+                    uint8_t screen_y = screen_y_start + row;
+                    if (screen_x >= 64 || screen_y >= 32)
+                        continue;
 
                     size_t screen_index = screen_y * 64 + screen_x;
                     if (sprite_pixel == 1 && chip8->gfx[screen_index] == 1)
@@ -404,20 +411,21 @@ void execute(Chip8* chip8) {
                 
                 case 0x33: // Fx33 - LD B, Vx : Store BCD representation of Vx in memory locations I, I+1, and I+2
                 {
-                    // uint8_t val = chip8->V[x];
-                    // uint8_t ones = val % 10;
-                    // val = val / 10;
-                    // uint8_t tens = val % 10;
-                    // val = val / 10;
-                    // uint8_t hundreds = val % 10;
+                    if (chip8->I + 2 >= RAM_SIZE) {
+                        fprintf(stderr, "Memory access out of bounds\n");
+                        break;
+                    }
+                    
+                    uint8_t val = chip8->V[x];
+                    uint8_t ones = val % 10;
+                    val = val / 10;
+                    uint8_t tens = val % 10;
+                    val = val / 10;
+                    uint8_t hundreds = val % 10;
 
-                    // chip8->memory[chip8->I] = hundreds;
-                    // chip8->memory[chip8->I + 1] = tens;
-                    // chip8->memory[chip8->I + 2] = ones;
-
-                    chip8->memory[chip8->I] = (chip8->V[x]%1000)/100;
-                    chip8->memory[chip8->I+1] = (chip8->V[x]%100)/10;
-                    chip8->memory[chip8->I+2] = (chip8->V[x]%10);
+                    chip8->memory[chip8->I] = hundreds;
+                    chip8->memory[chip8->I + 1] = tens;
+                    chip8->memory[chip8->I + 2] = ones;
 
                     break;
                 }
@@ -432,6 +440,8 @@ void execute(Chip8* chip8) {
                     for (uint8_t i = 0; i <= x; i++) 
                         chip8->memory[chip8->I + i] = chip8->V[i];
                     
+                    chip8->I += x + 1;
+
                     break;
                 }
                 
@@ -444,6 +454,8 @@ void execute(Chip8* chip8) {
 
                     for (uint8_t i = 0; i <= x; i++) 
                         chip8->V[i] = chip8->memory[chip8->I + i];
+                    
+                    chip8->I += x + 1;
 
                     break;
                 }
