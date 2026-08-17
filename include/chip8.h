@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "fontset.h"
+#include "sdl.h"
 
 #define FONT_START 0x50
 #define ROM_START 0x200
@@ -29,6 +30,7 @@ typedef struct {
 
     bool waiting_for_key_press;
     uint8_t waiting_register; 
+    int sample_count;
 } Chip8;
 
 void initialize(Chip8* chip8);

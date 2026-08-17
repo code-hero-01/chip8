@@ -23,6 +23,7 @@ int main(int argc, char* argv[]) {
     }
 
     SDLContext sdl;
+    sdl.sample_count = &chip8.sample_count;
     printf("Initializing SDL\n");
     if (!sdl_init(&sdl)) {
         fprintf(stderr, "Failed to initialize SDL2\n");

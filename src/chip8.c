@@ -393,6 +393,8 @@ void execute(Chip8* chip8) {
 
                 case 0x18: // Fx018 - LD ST, Vx : Set sound timer = Vx
                     chip8->sound_timer = chip8->V[x];
+                    double audio_duration = chip8->V[x] / 60.0;
+                    chip8->sample_count = audio_duration * SAMPLE_RATE;
                     break;
 
                 case 0x1E: // Fx1E - ADD I, Vx : Set I = I + Vx

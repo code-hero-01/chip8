@@ -1,7 +1,8 @@
 #include "sdl.h"
 
+int num_samples = 0;
 bool sdl_init(SDLContext* sdl) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return false;
     }
@@ -30,6 +31,25 @@ bool sdl_init(SDLContext* sdl) {
 
         return false;
     }
+
+    // desired audio specifications
+    SDL_AudioSpec want;
+    SDL_zero(want);
+    want.freq = SAMPLE_RATE;          // 44100 Hz sample rate
+    want.format = AUDIO_F32SYS;       // 32 bit float audio samples
+    want.channels = 1;                // Mono sound
+    want.samples = 512;               // Buffer size (must be a power of 2)
+    want.callback = audio_callback;   // The sound generator function
+    want.userdata = sdl->sample_count;
+    
+    sdl->audio_device = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+    if (sdl->audio_device == 0) {
+        fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
+        SDL_Quit();
+        return false;
+    }
+
+    SDL_PauseAudioDevice(sdl->audio_device, 0);   
 
     return true;
 }
@@ -88,8 +108,30 @@ void sdl_render(SDLContext* sdl, const uint8_t gfx[64 * 32]) {
     SDL_RenderPresent(sdl->renderer);
 }
 
+void audio_callback(void* userdata, uint8_t* stream, int len) {
+    int* num_samples = (int*)userdata;
+    float* buffer = (float*)stream;
+    int samples = len / sizeof(float); 
+
+    static double phase = 0.0;
+    for (int i = 0; i < samples; i++) {
+        if (*num_samples > 0) {
+            buffer[i] = phase < 0.5 ? 0.2f : -0.2f;
+            phase += FREQUENCY / SAMPLE_RATE;
+
+            if (phase >= 1.0)
+               phase -= 1.0;
+
+            (*num_samples)--;
+        }
+        else                                                                        
+            buffer[i] = 0.0f;                                                          
+    }
+}
+
 void sdl_shutdown(SDLContext* sdl) {
     SDL_DestroyRenderer(sdl->renderer);
+    SDL_CloseAudioDevice(sdl->audio_device);
     SDL_DestroyWindow(sdl->window);
     SDL_Quit();
 }
